@@ -4,13 +4,15 @@ const cols = document.querySelectorAll('.col')
 
 //смена цвета пробелом
 document.addEventListener('keydown', (event) => {
+  //отмена дефолт поведения элемента при клике пробелом
   event.preventDefault()
+
   if (event.code.toLocaleLowerCase() === 'space'){
     setRandomColors()
   }
 })
 
-//проверяем клик по объекту с даа "type"
+//проверяем клик по объекту с дата "type"
 document.addEventListener('click', (event) => {
   const type = event.target.dataset.type
 
@@ -23,6 +25,10 @@ document.addEventListener('click', (event) => {
 
     node.classList.toggle('fa-lock-open')
     node.classList.toggle('fa-lock')
+  }
+  //проверка клика по тексту для copy
+  else if (type === 'copy') {
+    copyToClickboard(event.target.textContent)
   }
 })
 
@@ -40,13 +46,41 @@ function generateRandomColor() {
   return '#' + color
 }
 
+//ф-ция копирования цвета при клике на h2
+function copyToClickboard(text) {
+  return navigator.clipboard.writeText(text)
+}
+
 //вставка случайного цвета на backGr и текста в h2
-function setRandomColors() {
-  cols.forEach((col) => {
+function setRandomColors(isInitial) {
+  //создаем массив с цветами
+  const colors = isInitial ? getColorsFromHash() : []
+
+  cols.forEach((col, index) => {
+    //определяем не висит ли замок на меняемом цвете
+    const isLocked = col.querySelector('i').classList.contains('fa-lock')
+
     const text = col.querySelector('h2')
     const button = col.querySelector('button')
+
+
+    if (isLocked) {
+      colors.push(text.textContent)
+      return
+    }
+
     // const color = generateRandomColor()
-    const color = chroma.random()
+    //проверяем, если первая загрузка то исп хеш в противном случае рандом
+    const color = isInitial 
+      ? colors[index]
+        ? colors[index]
+        : chroma.random() 
+      : chroma.random()
+
+    //если цвет не заблокирован то в пуш просто color при условии что это не первая загрузка
+    if (!isInitial) {
+      colors.push(color)
+    }
 
     text.textContent = color
     col.style.background = color
@@ -54,6 +88,8 @@ function setRandomColors() {
     setTextColor(text, color)
     setTextColor(button, color)
   })
+
+  updateColorsHash(colors)
 }
 
 //определим оттенок дял цвета текста, чтобы не сливался
@@ -62,5 +98,26 @@ function setTextColor(text, color) {
   text.style.color = luminance > 0.5 ? 'black' : 'white'
 }
 
-setRandomColors()
+//работа с хешем для запоминания подборки цветов, убираем "#" и разделяем все "-"
+function updateColorsHash(colors = []) {
+  document.location.hash = colors
+  .map((col) => {
+    return col.toString().substring(1)
+  })
+  .join('-')
+}
+
+//ф-ция для проверки есть ли в хеше изначально цвета
+function getColorsFromHash() {
+  //проверим есть ли чтото, если нет, то вернем пустой массив
+  if (document.location.hash.length > 1) {
+    return document.location.hash
+    .substring(1)
+    .split('-')
+    .map(color => '#' + color)
+  }
+  return []
+}
+
+setRandomColors(true)
 
